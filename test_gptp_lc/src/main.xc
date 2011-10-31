@@ -3,7 +3,6 @@
 #include "ethernet_server.h"
 #include <platform.h>
 #include "getmac.h"
-#include "xlog_server.h"
 #include "simple_printf.h"
 
 
@@ -37,70 +36,58 @@ on stdcore[0]: port test_port = XS1_PORT_8B;
 
 int main() 
 {
-  chan c_mac_rx[1], c_mac_tx[1];
-  chan ptp_link[1];
-  chan connect_status;
+	chan c_mac_rx[1], c_mac_tx[1];
+	chan ptp_link[1];
+	chan connect_status;
 
-  par {
-	// AVB - Ethernet
-	on stdcore[1]:
+	par
 	{
-		int mac_address[2];
-		ethernet_getmac_otp(otp_data, otp_addr, otp_ctrl, (mac_address, char[]));
-		phy_init(clk_smi, p_mii_resetn,
-				smi,
-				mii);
+		// 2 threads
+		on stdcore[1]:
+		{
+			int mac_address[2];
+			ethernet_getmac_otp(otp_data, otp_addr, otp_ctrl, (mac_address, char[]));
+			phy_init(clk_smi, p_mii_resetn,vsmi,vmii);
+			ethernet_server(mii, mac_address, c_mac_rx, 1, c_mac_tx, 1, smi, connect_status);
+		}
 
-		ethernet_server(mii, mac_address,
-				c_mac_rx, 1,
-				c_mac_tx, 1,
-				smi, connect_status);
+		on stdcore[1]: ptp_server(c_mac_rx[0], c_mac_tx[0], ptp_link, 1, PTP_GRANDMASTER_CAPABLE);
+			
+		on stdcore[0]: 
+		{
+			int x = 0;
+			timer tmr;
+			int t;
+			ptp_timestamp ptp_ts;
+			ptp_time_info ptp_info;
+
+			tmr :> t;
+			tmr when timerafter(t+10*100000000) :> void;
+
+			ptp_get_time_info(ptp_link[0], ptp_info);
+
+			tmr :> t;
+			local_timestamp_to_ptp(ptp_ts, t, ptp_info);
+
+			ptp_ts.seconds[0] += 2;
+			ptp_ts.nanoseconds = 0;
+
+			t = ptp_timestamp_to_local(ptp_ts, ptp_info);
+
+			x = ptp_ts.seconds[0] & 1;
+
+			while (1)
+			{
+				tmr when timerafter(t) :> void;
+				test_port <: x;
+				x = ~x;
+				ptp_get_time_info(ptp_link[0], ptp_info);
+				ptp_timestamp_offset(ptp_ts, 10000000);
+				t = ptp_timestamp_to_local(ptp_ts, ptp_info);
+			}
+		}
 	}
 
-    on stdcore[1]: ptp_server(c_mac_rx[0], 
-                              c_mac_tx[0], 
-                              ptp_link, 
-                              1, 
-                              PTP_GRANDMASTER_CAPABLE);
-
-                                
-    on stdcore[0]: 
-    {
-        int x = 0;
-        timer tmr;
-        int t;
-        ptp_timestamp ptp_ts;
-        ptp_time_info ptp_info;
-
-        tmr :> t;
-        tmr when timerafter(t+10*100000000) :> void;
-
-        ptp_get_time_info(ptp_link[0], ptp_info);
-
-        tmr :> t;
-        local_timestamp_to_ptp(ptp_ts, t, ptp_info);
-
-        ptp_ts.seconds[0] += 2;
-        ptp_ts.nanoseconds = 0;
-
-        t = ptp_timestamp_to_local(ptp_ts, ptp_info);
-
-        x = ptp_ts.seconds[0] & 1;
- 
-        while (1) {
-          tmr when timerafter(t) :> void;
-          test_port <: x;
-          x = ~x;
-          ptp_get_time_info(ptp_link[0], ptp_info);
-          ptp_timestamp_offset(ptp_ts, 10000000);
-          t = ptp_timestamp_to_local(ptp_ts, ptp_info);
-        }
-     }
-  
-     // Xlog server
-     on stdcore[0]: xlog_server_uart(p_uart_tx);
-  }
-
-  return 0;
+	return 0;
 }
 
