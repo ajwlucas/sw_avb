@@ -117,7 +117,7 @@ int main(void) {
 
 	par
 	{
-		// AVB - Ethernet
+		// TODO: Ethernet in 2 threads
 		on stdcore[1]:
 		{
 			int mac_address[2];
@@ -132,7 +132,7 @@ int main(void) {
 					smi, connect_status);
 		}
 
-		// AVB - PTP
+		// PTP - 1 thread
 		on stdcore[1]:
 		{
 			// We need to initiate the PLL from core 1, so do it here before
@@ -144,6 +144,7 @@ int main(void) {
 					c_gpio_ctl);
 		}
 
+		// Media clock recovery - 1 thread
 		on stdcore[1]:
 		{
             // Enable XScope printing
@@ -159,7 +160,7 @@ int main(void) {
 					AVB_NUM_MEDIA_CLOCKS);
 		}
 
-		// AVB - Audio
+		// I2S - 1 thread
 		on stdcore[0]: {
 			configure_clock_src(b_mclk, p_aud_mclk);
 			start_clock(b_mclk);
@@ -183,7 +184,7 @@ int main(void) {
 			}
 		}
 
-		// AVB Listener
+		// AVB Listener - 1 thread 
 		on stdcore[0]: avb_1722_listener(rx_link[1],
 				tx_link[1],
 				buf_ctl[0],
@@ -199,7 +200,7 @@ int main(void) {
 					AVB_NUM_MEDIA_OUTPUTS);
 		}
 
-		// Application threads
+		// Application thread - 1 thread
 		on stdcore[0]:
 		{
             // Enable XScope printing
