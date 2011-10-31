@@ -7,3 +7,10 @@
 *.xi
 *.i
 *.a
+/app_xc2_avb_demo/
+/app_xdk_avb_demo/
+/app_xdk_xai_avb_demo/
+/app_xr_avb_lc_demo/
+/module_avb_attero_cfg/
+/module_osc/
+/module_xdk_avb_common/
