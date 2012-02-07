@@ -152,8 +152,6 @@ static void manage_buffer(buf_info_t &b,
   if (fill < 0)
     fill += MEDIA_OUTPUT_FIFO_SAMPLE_FIFO_SIZE;
 
-
-
   ptp_get_time_info_mod64(ptp_svr, timeInfo);
  
   ptp_outgoing_actual = local_timestamp_to_ptp_mod32(outgoing_timestamp_local,
@@ -192,6 +190,19 @@ static void manage_buffer(buf_info_t &b,
   } else {
     b.stability_count = 0;
   }
+  
+    /*
+    if (!locked)
+    {
+        simple_printf("Media output %d locked: %d samples shorter\n", index, sample_diff);
+        inform_media_clocks_of_lock(index);
+        b.lock_count = 0;
+        buf_ctl <: b.fifo;
+        buf_ctl <: BUF_CTL_ADJUST_FILL;
+        buf_ctl <: sample_diff;
+        inct(buf_ctl);
+    }
+    */
 
   if (!locked && (b.stability_count > STABLE_THRESHOLD)) {
       if (fill - sample_diff > MEDIA_OUTPUT_FIFO_SAMPLE_FIFO_SIZE-MAX_SAMPLES_PER_1722_PACKET) {
@@ -310,8 +321,10 @@ void media_clock_server(chanend media_clock_ctl,
           switch (buf_ctl_cmd)
             {
             case BUF_CTL_GOT_INFO:
+            #pragma xta endpoint "manage_buffer_start"
               manage_buffer(buf_info[buf_index], ptp_svr, buf_ctl[i],
                             buf_index);
+                            #pragma xta endpoint "manage_buffer_end"
               break;
             case BUF_CTL_NEW_STREAM:
               buf_ctl[i] <: buf_info[buf_index].fifo;

@@ -37,6 +37,9 @@
 /* Allow for high sample rates */
 #define AVB_MAX_AUDIO_SAMPLE_RATE 96000
 
+#define AVB_1722_RECORD_ERRORS
+#define AVB_1722_PERIODIC_DEBUG
+
 /* Add synths from channels 3/4 upwards in I2S for this demo */
 // #define I2S_SYNTH_FROM 1
 
